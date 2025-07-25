@@ -26,6 +26,21 @@ ARG USER_UID=1000
 ENV DEBIAN_FRONTEND=noninteractive
 
 # IMAGE SETUP START #
+# dafn25_ptz_driver START #
+# Install cpr library
+WORKDIR /opt
+RUN git clone --depth 1 --single-branch --branch '1.12.0' https://github.com/libcpr/cpr.git && \
+  cd cpr && \
+  mkdir build && \
+  cd build && \
+  cmake -DCPR_USE_SYSTEM_CURL=ON .. \
+  make && \
+  make install && \
+  ldconfig && \
+  cd .. && \
+  rm -rf cpr
+WORKDIR /root
+# dafn25_ptz_driver END #
 # IMAGE SETUP END #
 
 # Create a user with Zsh as shell, hashed password, and add it to the sudoers
