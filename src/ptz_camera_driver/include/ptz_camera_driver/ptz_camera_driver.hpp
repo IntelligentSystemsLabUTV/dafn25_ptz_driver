@@ -41,6 +41,10 @@ private:
     image_transport::Publisher image_pub_;
     rclcpp::Subscription<axis_camera_interfaces::msg::PTZF>::SharedPtr command_sub_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr enable_service_;
+
+    // Variabili per il thread video
+    std::thread video_thread_;
+    std::atomic<bool> is_active_{false}; // Variabile per attivare/disattivare il loop
 };
 
 #endif // PTZ_CAMERA_DRIVER_HPP_
