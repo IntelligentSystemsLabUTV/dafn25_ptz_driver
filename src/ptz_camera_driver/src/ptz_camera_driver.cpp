@@ -9,7 +9,9 @@ int main(int argc, char ** argv)
   (void) argv;
   // modifica
   printf("hello world ptz_camera_driver package \n");
-  PtzCameraDriver();
+  auto node = std::make_shared<PtzCameraDriver>();
+
+  rclcpp::spin(node);
   return 0;
 }
 
@@ -45,6 +47,47 @@ PtzCameraDriver::PtzCameraDriver()
   RCLCPP_INFO(this->get_logger(), "Password: %s", params_.password.c_str());
   RCLCPP_INFO(this->get_logger(), "Pan Offset (pan0): %.2f gradi", params_.pan0);
   RCLCPP_INFO(this->get_logger(), "Sampling Period: %d ms", params_.sampling_period_ms);
-  RCLCPP_INFO(this->get_logger(), "Autostart: %s",params_.autostart ? "Abilitato" : "Disabilitato");
+  RCLCPP_INFO(this->get_logger(), "Autostart: %s",
+    params_.autostart ? "Abilitato" : "Disabilitato");
   RCLCPP_INFO(this->get_logger(), "------------------------------------");
+
+  // La traccia richiede di pubblicare immagini, quindi usiamo image_transport
+  image_transport::ImageTransport it(shared_from_this());
+  image_pub_ = it.advertise("image_raw", 1);   // Pubblica su /image_raw
+
+  // Crea la sottoscrizione al topic dei comandi
+  command_sub_ = this->create_subscription<axis_camera_interfaces::msg::PTZF>(
+        "ptz_command", // Nome del topic
+        10,            // Quality of Service
+        std::bind(&PtzCameraDriver::command_callback, this, std::placeholders::_1)
+  );
+  //CREAZIONE DEL SERVIZIO (richiesto dalla tua traccia)
+  enable_service_ = this->create_service<std_srvs::srv::SetBool>(
+        "enable_disable_stream",
+        std::bind(&PtzCameraDriver::enable_disable_callback, this, std::placeholders::_1,
+    std::placeholders::_2)
+  );
+  //abilitazione servizio di enable
+  is_active_ = params_.autostart;
+  if(is_active_) {
+    RCLCPP_INFO(this->get_logger(), "Autostart abilitato. Avvio del flusso video...");
+  } else {
+    RCLCPP_INFO(this->get_logger(),
+      "Autostart disabilitato. Il flusso video è in attesa del servizio di attivazione.");
+  }
+  //inizializzazione thread pubblicazione video
+
+  video_thread_ = std::thread(&PtzCameraDriver::video_publishing_loop, this);
+  RCLCPP_INFO(this->get_logger(), "Nodo PtzCameraDriver inizializzato con successo.");
+}
+
+//distruttore del nodo
+PtzCameraDriver::~PtzCameraDriver()
+{
+    RCLCPP_INFO(this->get_logger(), "Chiusura del nodo...");
+    is_active_ = false; // Ferma il loop nel thread
+    if (video_thread_.joinable()) {
+        video_thread_.join(); // Attende che il thread termini
+    }
+    RCLCPP_INFO(this->get_logger(), "Nodo chiuso correttamente.");
 }
