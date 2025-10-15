@@ -36,6 +36,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(Threads REQUIRED)
+find_package(cv_bridge REQUIRED)
 
 add_executable(ptz_camera_driver src/ptz_camera_driver.cpp)
 target_include_directories(ptz_camera_driver PUBLIC
@@ -58,6 +59,7 @@ ament_target_dependencies(
   "sensor_msgs"
   "std_msgs"
   "std_srvs"
+  "cv_bridge"
 )
 
 install(TARGETS ptz_camera_driver
