@@ -12,7 +12,7 @@
 #include <string>
 #include <thread>   // Per il thread video
 #include <atomic>   // Per la variabile di stato del thread
-// Altre inclusioni...
+
 
 struct CameraParams {
     bool autostart;
@@ -29,6 +29,8 @@ public:
     PtzCameraDriver();
     ~PtzCameraDriver(); // Distruttore per pulire le risorse (es. il thread)
 
+    void setup();//funzione che utilizzeremo per creare il setup dell'invio messsaggi che va fatto necessariamente dopo cheil costruttore del nodo è stato eseguito.
+
 private:
     // Qui andranno le variabili e le funzioni membro
     void command_callback(const axis_camera_interfaces::msg::PTZF::SharedPtr msg);
@@ -38,6 +40,7 @@ private:
 
     CameraParams params_; // La struct con tutti i parametri
 
+
     // Publisher, Subscriber e Service
     image_transport::Publisher image_pub_;
     rclcpp::Subscription<axis_camera_interfaces::msg::PTZF>::SharedPtr command_sub_;
@@ -45,7 +48,7 @@ private:
 
     // Variabili per il thread video
     std::thread video_thread_;
-    std::atomic<bool> is_active_{false}; // Variabile per attivare/disattivare il loop
+    std::atomic<bool> is_active_{false}; // Variabile per attivare/disattivare il loop, atomica per il multithread
 };
 
 #endif // PTZ_CAMERA_DRIVER_HPP_

@@ -5,12 +5,11 @@
 //modifica per prova commit edoardo
 int main(int argc, char ** argv)
 {
-  (void) argc;
-  (void) argv;
-  // modifica
-  printf("hello world ptz_camera_driver package \n");
+  rclcpp::init(argc, argv);
   auto node = std::make_shared<PtzCameraDriver>();
-
+  printf("nodo creato");
+  //chiamo la funzione setup del nodo per la costuzione mancante
+  node->setup();
   rclcpp::spin(node);
   return 0;
 }
@@ -51,7 +50,14 @@ PtzCameraDriver::PtzCameraDriver()
     params_.autostart ? "Abilitato" : "Disabilitato");
   RCLCPP_INFO(this->get_logger(), "------------------------------------");
 
-  // La traccia richiede di pubblicare immagini, quindi usiamo image_transport
+
+  RCLCPP_INFO(this->get_logger(), "Nodo PtzCameraDriver inizializzato con successo.");
+}
+
+void PtzCameraDriver::setup()
+{
+  //  pubblicazione delle immagini
+  RCLCPP_INFO(this->get_logger(), "funzione di Setup del nodo...");
   image_transport::ImageTransport it(shared_from_this());
   image_pub_ = it.advertise("image_raw", 1);   // Pubblica su /image_raw
 
@@ -61,12 +67,14 @@ PtzCameraDriver::PtzCameraDriver()
         10,            // Quality of Service
         std::bind(&PtzCameraDriver::command_callback, this, std::placeholders::_1)
   );
+
   //CREAZIONE DEL SERVIZIO (richiesto dalla tua traccia)
   enable_service_ = this->create_service<std_srvs::srv::SetBool>(
         "enable_disable_stream",
         std::bind(&PtzCameraDriver::enable_disable_callback, this, std::placeholders::_1,
     std::placeholders::_2)
   );
+
   //abilitazione servizio di enable
   is_active_ = params_.autostart;
   if(is_active_) {
@@ -78,7 +86,8 @@ PtzCameraDriver::PtzCameraDriver()
   //inizializzazione thread pubblicazione video
 
   video_thread_ = std::thread(&PtzCameraDriver::video_publishing_loop, this);
-  RCLCPP_INFO(this->get_logger(), "Nodo PtzCameraDriver inizializzato con successo.");
+
+  RCLCPP_INFO(this->get_logger(), "fine del processo di setup");
 }
 
 //distruttore del nodo
@@ -90,4 +99,29 @@ PtzCameraDriver::~PtzCameraDriver()
         video_thread_.join(); // Attende che il thread termini
     }
     RCLCPP_INFO(this->get_logger(), "Nodo chiuso correttamente.");
+}
+
+//AGGIUNTA DELLO SCHELETRO DELLE FUNZIONI MANCANTE SOLO PER PROVARE AD ESEGUIRE IL CODICE.
+
+void PtzCameraDriver::command_callback(const axis_camera_interfaces::msg::PTZF::SharedPtr msg)
+{
+    //corpo vuoto per ora.
+
+    (void)msg;
+}
+
+// Implementazione della callback per il servizio di attivazione/disattivazione
+void PtzCameraDriver::enable_disable_callback(
+    const std_srvs::srv::SetBool::Request::SharedPtr request,
+    std_srvs::srv::SetBool::Response::SharedPtr response)
+{
+    //corpo vuoto per ora
+    (void)request;
+    (void)response;
+}
+
+// Implementazione del loop per la pubblicazione video
+void PtzCameraDriver::video_publishing_loop()
+{
+  //corpo vuoto per ora
 }
