@@ -5,10 +5,12 @@
 #include <rclcpp/rclcpp.hpp>
 #include "std_srvs/srv/set_bool.hpp"
 #include "axis_camera_interfaces/msg/ptzf.hpp"
+#include "sensor_msgs/msg/image.hpp"
 #include "image_transport/image_transport.hpp"
 #include "opencv2/opencv.hpp"
 #include "cv_bridge/cv_bridge.hpp"
 
+#include <chrono> //#include<padre_di_zeus.h>
 #include <string>
 #include <thread>   // Per il thread video
 #include <atomic>   // Per la variabile di stato del thread
@@ -37,12 +39,21 @@ private:
     void enable_disable_callback(const std_srvs::srv::SetBool::Request::SharedPtr request,
                                  std_srvs::srv::SetBool::Response::SharedPtr response);
     void video_publishing_loop(); // La funzione che girerà nel thread separato
+
+    //gestione dello streaming del video
+    void start_streaming();
+
+    void stop_streaming();
+
     CameraParams params_; // La struct con tutti i parametri
 
     // Publisher, Subscriber e Service
     image_transport::Publisher image_pub_;
     rclcpp::Subscription<axis_camera_interfaces::msg::PTZF>::SharedPtr command_sub_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr enable_service_;
+
+    //oggetto per catturare il singolo frame dallo streaming video.
+    cv::VideoCapture cap_;
 
     // Variabili per il thread video
     std::thread video_thread_;

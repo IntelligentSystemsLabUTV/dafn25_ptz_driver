@@ -79,13 +79,18 @@ void PtzCameraDriver::setup()
   is_active_ = params_.autostart;
   if(is_active_) {
     RCLCPP_INFO(this->get_logger(), "Autostart abilitato. Avvio del flusso video...");
+    try {
+            // Chiama la funzione helper che avvia il thread e imposta is_active_
+            this->start_streaming();
+        } catch (const std::exception& e) {
+            RCLCPP_ERROR(this->get_logger(), "Autostart fallito: %s", e.what());
+        }
   } else {
     RCLCPP_INFO(this->get_logger(),
       "Autostart disabilitato. Il flusso video è in attesa del servizio di attivazione.");
   }
   //inizializzazione thread pubblicazione video
 
-  video_thread_ = std::thread(&PtzCameraDriver::video_publishing_loop, this);
 
   RCLCPP_INFO(this->get_logger(), "fine del processo di setup");
 }
@@ -94,10 +99,17 @@ void PtzCameraDriver::setup()
 PtzCameraDriver::~PtzCameraDriver()
 {
     RCLCPP_INFO(this->get_logger(), "Chiusura del nodo...");
-    is_active_ = false; // Ferma il loop nel thread
-    if (video_thread_.joinable()) {
-        video_thread_.join(); // Attende che il thread termini
+    //proviamo a chiudere il nodo e lo streaming video
+    try{
+    if (is_active_.load()) {
+        this->stop_streaming(); // Attende che il thread termini
     }
+   }
+   //se fallisce stampo l'errore
+   catch(const std::exception& e) {
+        RCLCPP_ERROR(this->get_logger(), "Errore nel distruttore: %s", e.what());
+    }
+
     RCLCPP_INFO(this->get_logger(), "Nodo chiuso correttamente.");
 }
 
@@ -183,13 +195,116 @@ void PtzCameraDriver::enable_disable_callback(
     const std_srvs::srv::SetBool::Request::SharedPtr request,
     std_srvs::srv::SetBool::Response::SharedPtr response)
 {
-    //corpo vuoto per ora
-    (void)request;
-    (void)response;
+    // Richiesta di ATTIVAZIONE
+    if (request->data) {
+       if (is_active_.load()) {
+            response->success = true;
+            response->message = "Camera driver già attivo.";
+            RCLCPP_WARN(this->get_logger(), "%s", response->message.c_str());
+            return;
+        }
+    try {
+            RCLCPP_INFO(this->get_logger(), "Richiesta di attivazione... avvio streaming.");
+            this->start_streaming(); // Chiama la funzione helper per avviare lo streaming
+            response->success = true;
+            response->message = "Camera driver attivato.";
+            RCLCPP_INFO(this->get_logger(), "%s", response->message.c_str());
+        } catch (const std::exception& e) {
+            // Se start_streaming() fallisce (es. non trova la camera)
+            response->success = false;
+            response->message = std::string("Fallimento attivazione: ") + e.what();
+            RCLCPP_ERROR(this->get_logger(), "%s", response->message.c_str());
+        }
+    }
+    //RICHIESTA DI DISATTIVAZIONE
+    else
+    {
+        if (!is_active_.load()) {
+            response->success = true;
+            response->message = "Camera driver già disattivo.";
+            RCLCPP_WARN(this->get_logger(), "%s", response->message.c_str());
+            return;
+        }
+        try {
+            RCLCPP_INFO(this->get_logger(), "Richiesta di disattivazione... arresto streaming.");
+            this->stop_streaming(); // Chiama la funzione helper
+            response->success = true;
+            response->message = "Camera driver disattivato.";
+            RCLCPP_INFO(this->get_logger(), "%s", response->message.c_str());
+        } catch (const std::exception& e) {
+            response->success = false;
+            response->message = std::string("Fallimento disattivazione: ") + e.what();
+            RCLCPP_ERROR(this->get_logger(), "%s", response->message.c_str());
+        }
+    }
+}
+
+void PtzCameraDriver::start_streaming()
+{
+  //costruzione dell'url per la condivisione del video
+  std::string video_url = "http://" + params_.username + ":" + params_.password +
+                            "@" + params_.ip + "/mjpg/video.mjpg";
+   //cerco di aprire lo stream con opencv
+   if (!cap_.open(video_url, cv::CAP_FFMPEG)) {
+        // Se fallisce, lancia un'eccezione che sarà gestita da enable_disable_callback
+        throw std::runtime_error("Impossibile aprire lo stream video!");
+    }
+
+    RCLCPP_INFO(this->get_logger(), "Stream video aperto con successo.");
+
+    is_active_.store(true);
+    video_thread_ = std::thread(&PtzCameraDriver::video_publishing_loop, this);
+}
+
+//funzione helper per spegnere lo streaming
+void PtzCameraDriver::stop_streaming()
+{
+  //segnalo al thread di terminare
+   is_active_.store(false);
+   if (video_thread_.joinable()) {
+        video_thread_.join();
+        RCLCPP_INFO(this->get_logger(), "Thread di streaming terminato (joined).");
+    }
+    //per liberare le risorse del video catturatore
+  if (cap_.isOpened()) {
+        cap_.release();
+        RCLCPP_INFO(this->get_logger(), "VideoCapture rilasciato.");
+  }
 }
 
 // Implementazione del loop per la pubblicazione video
 void PtzCameraDriver::video_publishing_loop()
 {
-  //corpo vuoto per ora
+  //inizializzo un oggetto di controllo di ritmo, per usare gli sleep
+  rclcpp::WallRate rate(std::chrono::milliseconds(params_.sampling_period_ms));
+
+  cv::Mat frame;
+  sensor_msgs::msg::Image::SharedPtr msg;
+//continuo a girare finchè funziona ros e finche il flag è attivo
+   while (rclcpp::ok() && is_active_.load())
+    {
+      // 1. Leggi il frame
+        if (!cap_.read(frame)) {
+            RCLCPP_WARN(this->get_logger(), "Thread: Frame non valido (read fallita).");
+            rate.sleep();
+            continue;
+        }
+      // 2. Controlla frame vuoto
+       if (frame.empty()) {
+            RCLCPP_WARN(this->get_logger(), "Thread: Frame vuoto.");
+            rate.sleep();
+            continue;
+        }
+        // 3. Crea l'header del messaggio
+        std_msgs::msg::Header header;
+        header.stamp = this->get_clock()->now();
+        header.frame_id = "camera_color_optical_frame"; // Puoi renderlo un parametro
+      // 4. Converto e pubblico
+      msg = cv_bridge::CvImage(header, "bgr8", frame).toImageMsg(); //converto l'immagine nel formato per ros2
+      image_pub_.publish(msg); //pubblico l'immagine
+
+      // 5. Attendo per mantenere il rate
+      rate.sleep();
+    }
+   RCLCPP_INFO(this->get_logger(), "Thread: Loop di streaming terminato.");
 }
