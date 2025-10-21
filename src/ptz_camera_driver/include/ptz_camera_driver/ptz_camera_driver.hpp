@@ -12,7 +12,7 @@
 #include <string>
 #include <thread>   // Per il thread video
 #include <atomic>   // Per la variabile di stato del thread
-
+#include <sstream>
 
 struct CameraParams {
     bool autostart;
@@ -37,9 +37,7 @@ private:
     void enable_disable_callback(const std_srvs::srv::SetBool::Request::SharedPtr request,
                                  std_srvs::srv::SetBool::Response::SharedPtr response);
     void video_publishing_loop(); // La funzione che girerà nel thread separato
-
     CameraParams params_; // La struct con tutti i parametri
-
 
     // Publisher, Subscriber e Service
     image_transport::Publisher image_pub_;
