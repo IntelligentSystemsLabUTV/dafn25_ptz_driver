@@ -33,12 +33,12 @@ RUN git clone --depth 1 --single-branch --branch '1.12.0' https://github.com/lib
   cd cpr && \
   mkdir build && \
   cd build && \
-  cmake -DCPR_USE_SYSTEM_CURL=ON .. \
+  cmake -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=ON .. \
   make && \
   make install && \
   ldconfig && \
   cd .. && \
-  rm -rf cpr
+  rm -rf build
 WORKDIR /root
 # dafn25_ptz_driver END #
 # IMAGE SETUP END #
