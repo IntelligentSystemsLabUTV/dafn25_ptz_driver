@@ -28,7 +28,7 @@ struct CameraParams {
 class PtzCameraDriver : public rclcpp::Node
 {
 public:
-    PtzCameraDriver();
+    explicit PtzCameraDriver(const rclcpp::NodeOptions & options); // <-- NUOVA RIGA
     ~PtzCameraDriver(); // Distruttore per pulire le risorse (es. il thread)
 
     void setup();//funzione che utilizzeremo per creare il setup dell'invio messsaggi che va fatto necessariamente dopo cheil costruttore del nodo è stato eseguito.
