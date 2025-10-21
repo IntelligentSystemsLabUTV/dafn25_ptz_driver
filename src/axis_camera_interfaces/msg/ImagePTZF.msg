@@ -1,4 +1,4 @@
-# Camera image, with pan-tilt-zoom values.
+ Camera image, with pan-tilt-zoom values.
 #
 # Lorenzo Bianchi <lnz.bnc@gmail.com>
 # Intelligent Systems Lab <isl.torvergata@gmail.com>
