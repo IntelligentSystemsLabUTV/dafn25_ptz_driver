@@ -10,7 +10,7 @@
 #include "opencv2/opencv.hpp"
 #include "cv_bridge/cv_bridge.hpp"
 
-#include <chrono> //#include<padre_di_zeus.h>
+#include <chrono>
 #include <string>
 #include <thread>   // Per il thread video
 #include <atomic>   // Per la variabile di stato del thread
@@ -28,7 +28,7 @@ struct CameraParams {
 class PtzCameraDriver : public rclcpp::Node
 {
 public:
-    explicit PtzCameraDriver(const rclcpp::NodeOptions & options); // <-- NUOVA RIGA
+    explicit PtzCameraDriver(const rclcpp::NodeOptions & options);
     ~PtzCameraDriver(); // Distruttore per pulire le risorse (es. il thread)
 
     void setup();//funzione che utilizzeremo per creare il setup dell'invio messsaggi che va fatto necessariamente dopo cheil costruttore del nodo è stato eseguito.

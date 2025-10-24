@@ -4,7 +4,7 @@
 
     //costruttore del nodo
 PtzCameraDriver::PtzCameraDriver(const rclcpp::NodeOptions & options)
-: rclcpp::Node("ptz_camera_driver",options)
+  : Node("ptz_camera_driver", options)
 {
   RCLCPP_INFO(this->get_logger(), "Inizializzazione del nodo PtzCameraDriver...");
   //dichiaro parametri
