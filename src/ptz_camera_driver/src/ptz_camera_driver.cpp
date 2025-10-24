@@ -114,31 +114,31 @@ void PtzCameraDriver::command_callback(const axis_camera_interfaces::msg::PTZF::
         // Comando Pan Assoluto (pan) - Applica la compensazione pan0
     double target_pan = msg->pan + params_.pan0;
     params.Add({"pan", std::to_string(target_pan)});
-    RCLCPP_DEBUG(this->get_logger(), "Comando pan assoluto: %.2f", target_pan);
+    RCLCPP_INFO(this->get_logger(), "Comando pan assoluto: %.2f", target_pan);
   } else {
         // Comando Pan Relativo (rpan) - (L'offset pan0 è gestito in lettura, non in scrittura relativa)
     params.Add({"rpan", std::to_string(msg->pan)});
-    RCLCPP_DEBUG(this->get_logger(), "Comando pan relativo: %.2f", msg->pan);
+    RCLCPP_INFO(this->get_logger(), "Comando pan relativo: %.2f", msg->pan);
   }
     //gestione del tilt
   if (msg->tilt_global) {
         // Comando Tilt Assoluto (tilt)
     params.Add({"tilt", std::to_string(msg->tilt)});
-    RCLCPP_DEBUG(this->get_logger(), "Comando tilt assoluto: %.2f", msg->tilt);
+    RCLCPP_INFO(this->get_logger(), "Comando tilt assoluto: %.2f", msg->tilt);
   } else {
         // Comando Tilt Relativo (rtilt)
     params.Add({"rtilt", std::to_string(msg->tilt)});
-    RCLCPP_DEBUG(this->get_logger(), "Comando tilt relativo: %.2f", msg->tilt);
+    RCLCPP_INFO(this->get_logger(), "Comando tilt relativo: %.2f", msg->tilt);
   }
     //gestione zoom
   if (msg->zoom_global) {
         // Comando Zoom Assoluto (zoom)
     params.Add({"zoom", std::to_string(msg->zoom)});
-    RCLCPP_DEBUG(this->get_logger(), "Comando zoom assoluto: %.2f", msg->zoom);
+    RCLCPP_INFO(this->get_logger(), "Comando zoom assoluto: %.2f", msg->zoom);
   } else {
         // Comando Zoom Relativo (rzoom)
     params.Add({"rzoom", std::to_string(msg->zoom)});
-    RCLCPP_DEBUG(this->get_logger(), "Comando zoom relativo: %.2f", msg->zoom);
+    RCLCPP_INFO(this->get_logger(), "Comando zoom relativo: %.2f", msg->zoom);
   }
     //gestione focus
   if (std::abs(msg->focus) > 0.5) {    // verifico se tenere o meno l'autofocus
@@ -146,32 +146,31 @@ void PtzCameraDriver::command_callback(const axis_camera_interfaces::msg::PTZF::
     if (msg->focus_global) {
             // Comando Focus Assoluto (focus)
       params.Add({"focus", std::to_string(msg->focus)});
-      RCLCPP_DEBUG(this->get_logger(), "Comando focus assoluto: %.2f", msg->focus);
+      RCLCPP_INFO(this->get_logger(), "Comando focus assoluto: %.2f", msg->focus);
     } else {
             // Comando Focus Relativo (rfocus)
       params.Add({"rfocus", std::to_string(msg->focus)});
-      RCLCPP_DEBUG(this->get_logger(), "Comando focus relativo: %.2f", msg->focus);
+      RCLCPP_INFO(this->get_logger(), "Comando focus relativo: %.2f", msg->focus);
     }
   } else {
     params.Add({"autofocus", "on"});
-    RCLCPP_DEBUG(this->get_logger(), "Comando autofocus on.");
+    RCLCPP_INFO(this->get_logger(), "Comando autofocus on.");
   }
     //aggiunta dei parametri standard
   params.Add({"camera", "1"});
   params.Add({"html", "no"});
   params.Add({"timestamp", std::to_string(std::time(nullptr))});   //per identficare temporalmente la richiesta inviata
     //creazione della richiesta http
-
-  std::string command_url = "http://" + params_.ip + "//axis-cgi/com/ptz.cgi";
+  std::string command_url = "http://" + params_.ip + "/axis-cgi/com/ptz.cgi";
     // Invio della richiesta usando l'autenticazione base
   cpr::Response r = cpr::Get(
         cpr::Url{command_url},
-        cpr::Parameters{params},
-        cpr::Authentication{params_.username, params_.password, cpr::AuthMode::BASIC},
+        params,
+        cpr::Authentication{params_.username, params_.password, cpr::AuthMode::DIGEST},
         cpr::Timeout{500} // Timeout di 500ms
   );
     //gestione della risposta, verifica dei codici di risposta
-  if (r.status_code == cpr::status::HTTP_OK) {
+  if (r.status_code == cpr::status::HTTP_OK || r.status_code == 204) {
     RCLCPP_INFO(this->get_logger(), "Comando PTZ inviato. Risposta: %s", r.text.c_str());
   } else {
     RCLCPP_ERROR(this->get_logger(), "Errore invio comando PTZ. Stato: %ld, Errore: %s",
