@@ -40,7 +40,6 @@ find_package(cv_bridge REQUIRED)
 
 add_library(ptz_camera_driver SHARED
   src/ptz_camera_driver.cpp
-  # Aggiungi qui altri file .cpp se la tua libreria ne ha bisogno
 )
 target_compile_definitions(ptz_camera_driver PRIVATE COMPOSITION_BUILDING_DLL)
 target_include_directories(ptz_camera_driver PUBLIC
@@ -65,7 +64,6 @@ ament_target_dependencies(
   "std_srvs"
   "cv_bridge"
 )
-# Registra il componente usando il nome della classe
 rclcpp_components_register_nodes(ptz_camera_driver "PtzCameraDriver")
 
 # Questo crea un piccolo eseguibile per lanciare il nodo
@@ -77,7 +75,6 @@ target_include_directories(ptz_camera_app PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
-  # Linka l'app alla libreria del nodo
 target_link_libraries(ptz_camera_app
   ptz_camera_driver
 )
@@ -87,14 +84,12 @@ ament_target_dependencies(
   "rclcpp"
 )
 
-# Installa la LIBRERIA (componente)
 install(TARGETS ptz_camera_driver
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
 
-# Installa l'APP (eseguibile standalone)
 install(TARGETS ptz_camera_app
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -110,5 +105,15 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+# Installo la cartella launch
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}
+)
 
+# Installo la cartella config
+install(DIRECTORY
+  config
+  DESTINATION share/${PROJECT_NAME}
+)
 ament_package()

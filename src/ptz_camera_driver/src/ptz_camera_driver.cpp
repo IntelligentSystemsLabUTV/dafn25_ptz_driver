@@ -2,7 +2,7 @@
 #include <cpr/cpr.h>
 
 
-    //costruttore del nodo
+//Costruttore del nodo
 PtzCameraDriver::PtzCameraDriver(const rclcpp::NodeOptions & options)
   : Node("ptz_camera_driver", options)
 {
@@ -14,9 +14,6 @@ PtzCameraDriver::PtzCameraDriver(const rclcpp::NodeOptions & options)
   this->declare_parameter<std::string>("camera.password", "TorVergata2");
   this->declare_parameter<double>("camera.pan0", 0.0);
   this->declare_parameter<int>("camera.sampling_period", 100); // Valore in millisecondi
-  // Ora che i parametri sono stati dichiarati, li leggi e salvi i loro valori
-  // nei campi corrispondenti della tua struct 'params_'. In questo modo,
-  // saranno facilmente accessibili in tutto il resto del codice del tuo nodo.
 
   RCLCPP_INFO(this->get_logger(), "Lettura dei valori dei parametri...");
   params_.autostart = this->get_parameter("autostart").as_bool();
@@ -25,17 +22,16 @@ PtzCameraDriver::PtzCameraDriver(const rclcpp::NodeOptions & options)
   params_.password = this->get_parameter("camera.password").as_string();
   params_.pan0 = this->get_parameter("camera.pan0").as_double();
   params_.sampling_period_ms = this->get_parameter("camera.sampling_period").as_int();
+
   //LOG DI VERIFICA
   RCLCPP_INFO(this->get_logger(), "--- Configurazione Camera Caricata ---");
   RCLCPP_INFO(this->get_logger(), "IP Address: %s", params_.ip.c_str());
   RCLCPP_INFO(this->get_logger(), "Username: %s", params_.username.c_str());
-  // Nota: Evita di stampare la password in un log in un'applicazione reale per motivi di sicurezza.
-  // Lo facciamo qui solo a scopo didattico.
   RCLCPP_INFO(this->get_logger(), "Password: %s", params_.password.c_str());
   RCLCPP_INFO(this->get_logger(), "Pan Offset (pan0): %.2f gradi", params_.pan0);
   RCLCPP_INFO(this->get_logger(), "Sampling Period: %d ms", params_.sampling_period_ms);
   RCLCPP_INFO(this->get_logger(), "Autostart: %s",
-    params_.autostart ? "Abilitato" : "Disabilitato");
+  params_.autostart ? "Abilitato" : "Disabilitato");
   RCLCPP_INFO(this->get_logger(), "------------------------------------");
 
 
@@ -45,7 +41,7 @@ PtzCameraDriver::PtzCameraDriver(const rclcpp::NodeOptions & options)
 
 void PtzCameraDriver::setup()
 {
-  //  pubblicazione delle immagini
+  // Pubblicazione delle immagini
   RCLCPP_INFO(this->get_logger(), "funzione di Setup del nodo...");
   image_transport::ImageTransport it(shared_from_this());
   image_pub_ = it.advertise("image_raw", 1);   // Pubblica su /image_raw
@@ -57,19 +53,19 @@ void PtzCameraDriver::setup()
         std::bind(&PtzCameraDriver::command_callback, this, std::placeholders::_1)
   );
 
-  //CREAZIONE DEL SERVIZIO (richiesto dalla tua traccia)
+  //CREAZIONE DEL SERVIZIO
   enable_service_ = this->create_service<std_srvs::srv::SetBool>(
         "enable_disable_stream",
         std::bind(&PtzCameraDriver::enable_disable_callback, this, std::placeholders::_1,
     std::placeholders::_2)
   );
 
-  //abilitazione servizio di enable
+  //Abilitazione servizio di enable
   is_active_ = params_.autostart;
   if(is_active_) {
     RCLCPP_INFO(this->get_logger(), "Autostart abilitato. Avvio del flusso video...");
     try {
-            // Chiama la funzione helper che avvia il thread e imposta is_active_
+      // Chiama la funzione helper che avvia il thread e imposta is_active_
       this->start_streaming();
     } catch (const std::exception & e) {
       RCLCPP_ERROR(this->get_logger(), "Autostart fallito: %s", e.what());
@@ -79,12 +75,10 @@ void PtzCameraDriver::setup()
       "Autostart disabilitato. Il flusso video è in attesa del servizio di attivazione.");
   }
   //inizializzazione thread pubblicazione video
-
-
   RCLCPP_INFO(this->get_logger(), "fine del processo di setup");
 }
 
-//distruttore del nodo
+//Distruttore del nodo
 PtzCameraDriver::~PtzCameraDriver()
 {
   RCLCPP_INFO(this->get_logger(), "Chiusura del nodo...");
@@ -101,9 +95,6 @@ PtzCameraDriver::~PtzCameraDriver()
 
   RCLCPP_INFO(this->get_logger(), "Nodo chiuso correttamente.");
 }
-
-//AGGIUNTA DELLO SCHELETRO DELLE FUNZIONI MANCANTE SOLO PER PROVARE AD ESEGUIRE IL CODICE.
-
 void PtzCameraDriver::command_callback(const axis_camera_interfaces::msg::PTZF::SharedPtr msg)
 {
   RCLCPP_INFO(this->get_logger(), "Ricevuto nuovo comando PTZF.");
@@ -269,27 +260,27 @@ void PtzCameraDriver::video_publishing_loop()
   sensor_msgs::msg::Image::SharedPtr msg;
 //continuo a girare finchè funziona ros e finche il flag è attivo
   while (rclcpp::ok() && is_active_.load()) {
-      // 1. Leggi il frame
+      // Legge il frame
     if (!cap_.read(frame)) {
       RCLCPP_WARN(this->get_logger(), "Thread: Frame non valido (read fallita).");
       rate.sleep();
       continue;
     }
-      // 2. Controlla frame vuoto
+      //Controlla frame vuoto
     if (frame.empty()) {
       RCLCPP_WARN(this->get_logger(), "Thread: Frame vuoto.");
       rate.sleep();
       continue;
     }
-        // 3. Crea l'header del messaggio
+        // Crea l'header del messaggio
     std_msgs::msg::Header header;
     header.stamp = this->get_clock()->now();
     header.frame_id = "camera_color_optical_frame";     // Puoi renderlo un parametro
-      // 4. Converto e pubblico
+      // Converto e pubblico
     msg = cv_bridge::CvImage(header, "bgr8", frame).toImageMsg();   //converto l'immagine nel formato per ros2
     image_pub_.publish(msg);   //pubblico l'immagine
 
-      // 5. Attendo per mantenere il rate
+      // Attendo per mantenere il rate
     rate.sleep();
   }
   RCLCPP_INFO(this->get_logger(), "Thread: Loop di streaming terminato.");

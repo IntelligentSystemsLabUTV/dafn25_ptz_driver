@@ -1,0 +1,11 @@
+ptz_camera_driver:
+  ros__parameters:
+
+    # Parametri globali
+    autostart: true
+    camera:
+      ip: "192.168.0.90"
+      username: "root"
+      password: "TorVergata2"
+      pan0: 10.0
+      sampling_period: 100

@@ -2,7 +2,7 @@
 #include <cpr/cpr.h>
 #include "rclcpp/rclcpp.hpp"
 
-//modifica per prova commit edoardo
+//Main function
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);

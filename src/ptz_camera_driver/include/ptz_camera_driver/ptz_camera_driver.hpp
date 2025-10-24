@@ -12,8 +12,8 @@
 
 #include <chrono>
 #include <string>
-#include <thread>   // Per il thread video
-#include <atomic>   // Per la variabile di stato del thread
+#include <thread>
+#include <atomic>
 #include <sstream>
 
 struct CameraParams {
@@ -29,18 +29,17 @@ class PtzCameraDriver : public rclcpp::Node
 {
 public:
     explicit PtzCameraDriver(const rclcpp::NodeOptions & options);
-    ~PtzCameraDriver(); // Distruttore per pulire le risorse (es. il thread)
+    ~PtzCameraDriver(); // Distruttore
 
-    void setup();//funzione che utilizzeremo per creare il setup dell'invio messsaggi che va fatto necessariamente dopo cheil costruttore del nodo è stato eseguito.
+    void setup();
 
 private:
-    // Qui andranno le variabili e le funzioni membro
     void command_callback(const axis_camera_interfaces::msg::PTZF::SharedPtr msg);
     void enable_disable_callback(const std_srvs::srv::SetBool::Request::SharedPtr request,
                                  std_srvs::srv::SetBool::Response::SharedPtr response);
-    void video_publishing_loop(); // La funzione che girerà nel thread separato
+    void video_publishing_loop();
 
-    //gestione dello streaming del video
+    //Gestione dello streaming del video
     void start_streaming();
 
     void stop_streaming();
@@ -52,7 +51,7 @@ private:
     rclcpp::Subscription<axis_camera_interfaces::msg::PTZF>::SharedPtr command_sub_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr enable_service_;
 
-    //oggetto per catturare il singolo frame dallo streaming video.
+    //Oggetto per catturare il singolo frame dallo streaming video.
     cv::VideoCapture cap_;
 
     // Variabili per il thread video
